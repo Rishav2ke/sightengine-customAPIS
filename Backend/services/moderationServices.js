@@ -36,6 +36,26 @@ const moderateImage = async (filePath) => {
     return response.data;
 };
 
+// moderate Text
+const moderateText = async (text) => {
+
+  const response = await axios.post(
+    "https://api.sightengine.com/1.0/text/check.json",
+    null,
+    {
+      params: {
+        text,
+        mode: "standard",
+        lang: "en",
+        api_user: process.env.API_USER,
+        api_secret: process.env.API_SECRET
+      }
+    }
+  );
+
+  return response.data;
+};
+
 module.exports = {
-    moderateImage
+    moderateImage, moderateText
 };

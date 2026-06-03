@@ -1,6 +1,7 @@
-// controllers/moderationController.js
 
-const { moderateImage } = require("../services/moderationServices.js");
+// Image Controller
+
+const { moderateImage, moderateText } = require("../services/moderationServices.js");
 
 const checkImage = async (req, res) => {
   try {
@@ -57,4 +58,43 @@ const checkImage = async (req, res) => {
   }
 };
 
-module.exports = { checkImage };
+
+// check text controller
+
+const checkText = async (req, res) => {
+
+  try {
+
+    const { text } = req.body;
+
+    const result = await moderateText(text);
+
+    let safe = true;
+    let reasons = [];
+
+    // We'll inspect the actual response structure
+    // after the first test.
+
+    if (
+      result.profanity?.matches?.length > 0
+    ) {
+      safe = false;
+      reasons.push("Profanity detected");
+    }
+
+    res.status(200).json({
+      safe,
+      reasons,
+      result
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: error.message
+    });
+
+  }
+};
+
+module.exports = { checkImage, checkText };
