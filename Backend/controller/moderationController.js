@@ -12,9 +12,9 @@ const checkImage = async (req, res) => {
 
     // Nudity
     if (
-      result.nudity?.sexual_activity > 0.5 ||
-      result.nudity?.sexual_display > 0.5 ||
-      result.nudity?.erotica > 0.5
+      result.nudity?.sexual_activity > 0.89 ||
+      result.nudity?.sexual_display > 0.89 ||
+      result.nudity?.erotica > 0.89
     ) {
       safe = false;
       reasons.push("Nudity detected");
@@ -22,8 +22,8 @@ const checkImage = async (req, res) => {
 
     // Weapons
     if (
-      result.weapon?.classes?.knife > 0.5 ||
-      result.weapon?.classes?.firearm > 0.5
+      result.weapon?.classes?.knife > 0.89 ||
+      result.weapon?.classes?.firearm > 0.89
     ) {
       safe = false;
       reasons.push("Weapon detected");
@@ -31,8 +31,8 @@ const checkImage = async (req, res) => {
 
     // Violence
     if (
-      result.violence?.prob > 0.5 ||
-      result.violence?.classes?.physical_violence > 0.5
+      result.violence?.prob > 0.89 ||
+      result.violence?.classes?.physical_violence > 0.89
     ) {
       safe = false;
       reasons.push("Violence detected");
@@ -61,39 +61,105 @@ const checkImage = async (req, res) => {
 
 // check text controller
 
+
+
+// Convert:
+// H O W T O B U I L D T H E B O M B
+// into:
+// howtobuildthebomb
+
+function collapseSpacedLetters(text) {
+  return text.replace(
+    /\b(?:[a-zA-Z]\s+){2,}[a-zA-Z]\b/g,
+    match => match.replace(/\s+/g, "")
+  );
+}
+
+// Convert:
+// b0mb -> bomb
+// k1ll -> kill
+
+function replaceLeetspeak(text) {
+  return text
+    .replace(/0/g, "o")
+    .replace(/1/g, "i")
+    .replace(/3/g, "e")
+    .replace(/4/g, "a")
+    .replace(/5/g, "s");
+}
+
+function preprocess(text) {
+  let cleaned = text.toLowerCase();
+
+  cleaned = collapseSpacedLetters(cleaned);
+
+  cleaned = replaceLeetspeak(cleaned);
+
+  cleaned = cleaned.replace(/[^\w\s]/g, "");
+
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+  return cleaned;
+}
+
 const checkText = async (req, res) => {
-
   try {
-
     const { text } = req.body;
 
     const result = await moderateText(text);
 
+    const processedText = preprocess(text);
+
     let safe = true;
     let reasons = [];
 
-    // We'll inspect the actual response structure
-    // after the first test.
+    // Sightengine profanity
 
-    if (
-      result.profanity?.matches?.length > 0
-    ) {
+    if (result.profanity?.matches?.length > 0) {
       safe = false;
       reasons.push("Profanity detected");
     }
 
+    // Custom harmful keywords
+
+    const riskyTerms = [
+      
+      "kill",
+      "murder",
+      "suicide",
+      "shoot",
+      "stab",
+      "explode",
+      "poison",
+      "hurt myself",
+      "end my life",
+      
+    ];
+
+    if (
+      riskyTerms.some(term =>
+        processedText.includes(term)
+      )
+    ) {
+      safe = false;
+      reasons.push("Potentially harmful content");
+    }
+
+    // console.log("Original:", text);
+    // console.log("Processed:", processedText);
+    // console.log(JSON.stringify(result, null, 2));
+
     res.status(200).json({
       safe,
       reasons,
+      processedText,
       result
     });
 
   } catch (error) {
-
     res.status(500).json({
       message: error.message
     });
-
   }
 };
 
